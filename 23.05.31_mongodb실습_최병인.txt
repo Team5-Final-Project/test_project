@@ -1,0 +1,221 @@
+/*
+	- 본인이름에 맞추어 파일명 수정
+	- 최종 결과를 출력하는 명령문만 작성하는 것이 아니라 중간 실행한 부분까지 작성 및 첨부
+	- 최종 결과는 An. 작성 에 표시
+*/
+
+db.books.insertOne(
+  {
+      _id : 1
+    , title : "mongodb"
+    , isbn : "0001122223334"
+    , author : { last : "dev", first : "it" }
+    , copies : 5
+  }
+);
+
+// 예상 결과 : { "_id" : 1, "title" : "mongodb", "author" : { "last" : "dev", "first" : "it" } }
+// hint : $project
+// A1. 작성 : db.books.aggregate( [ { $project : { _id: 1, title :1, author :1} } ] );
+
+===================================================
+db.articles.insertMany(
+  [
+      { "_id" : 1, "author" : "dev", "score" : 80, "views" : 100 }
+    , { "_id" : 2, "author" : "it", "score" : 60, "views" : 1000 }
+    , { "_id" : 3, "author" : "devops", "score" : 55, "views" : 5000 }
+  ]
+);
+
+// 예상 결과 : { "_id" : 3, "author" : "devops", "score" : 55, "views" : 5000 }
+// hint : $match
+// A2. 작성 : db.articles.aggregate( [ { $match : { author : "devops" } } ] 
+);
+
+===================================================
+db.sales.insertMany(
+  [
+      { "_id" : 1, "item" : "dev", "price" : 10, "quantity" : 2, "date" : ISODate("2014-03-01T08:00:00Z") }
+    , { "_id" : 2, "item" : "it", "price" : 20, "quantity" : 1, "date" : ISODate("2014-03-01T09:00:00Z") }
+    , { "_id" : 3, "item" : "devops", "price" : 5, "quantity" : 10, "date" : ISODate("2014-03-15T09:00:00Z") }
+    , { "_id" : 4, "item" : "devops", "price" : 5, "quantity" : 20, "date" : ISODate("2014-04-01T11:21:39.736Z") }
+    , { "_id" : 5, "item" : "dev", "price" : 10, "quantity" : 10, "date" : ISODate("2014-04-04T21:23:13.331Z") }
+  ]
+);
+
+/* 예상 결과
+{ "_id" : { "month" : 4, "day" : 4, "year" : 2014 }, "totalPrice" : 100, "averageQuantity" : null, "count" : 1 }
+{ "_id" : { "month" : 3, "day" : 15, "year" : 2014 }, "totalPrice" : 50, "averageQuantity" : null, "count" : 1 }
+{ "_id" : { "month" : 3, "day" : 1, "year" : 2014 }, "totalPrice" : 40, "averageQuantity" : null, "count" : 2 }
+{ "_id" : { "month" : 4, "day" : 1, "year" : 2014 }, "totalPrice" : 100, "averageQuantity" : null, "count" : 1 }
+*/
+// hint : group의 _id는 아래의 내용 적용
+/*
+_id : { 
+		  month : { $month : "$date" } 
+		, day : { $dayOfMonth : "$date" }
+		, year : { $year : "$date" }
+        }
+*/
+// A3. 작성 : db.sales.aggregate( [ {  
+$group : {
+_id : { 
+		  month : { $month : "$date" } 
+		, day : { $dayOfMonth : "$date" }
+		, year : { $year : "$date" }
+        }
+}
+}
+])
+
+---------------------------
+/* 예상 결과
+{ "_id" : "dev" }
+{ "_id" : "it" }
+{ "_id" : "devops" }
+*/
+
+// A4. 작성 :   db.sales.aggregate( [ {  
+$group : {
+_id : "$item"
+}
+}
+])
+
+===================================================
+db.items.insertOne(
+  { "_id" : 1, "item" : "dev", "sizes" : [ "S", "M", "L" ] }
+);
+
+/* 예상 결과
+{ "_id" : 1, "item" : "dev", "sizes" : "S" }
+{ "_id" : 1, "item" : "dev", "sizes" : "M" }
+{ "_id" : 1, "item" : "dev", "sizes" : "L" }
+*/
+// hint : $unwind
+// A5. 작성 : db.items.aggregate( [ { $unwind : "$sizes" } ] )
+
+===================================================
+zips.json
+[zips]
+	- city : 도시명 
+	- loc[경도, 위도] : 위치
+	- pop : 인구수 
+	- state : 주명
+
+- 1000만 이상의 state 출력하기
+/* 예상 결과
+{ "_id" : "FL", "total_pop" : 12686644 }
+{ "_id" : "PA", "total_pop" : 11881643 }
+{ "_id" : "NY", "total_pop" : 17990402 }
+{ "_id" : "TX", "total_pop" : 16984601 }
+{ "_id" : "CA", "total_pop" : 29754890 }
+{ "_id" : "IL", "total_pop" : 11427576 }
+{ "_id" : "OH", "total_pop" : 10846517 }
+*/
+// A6. 작성 : db.zips.aggregate(
+  [
+    {
+      $group :
+        {
+          _id : "$state",
+          total_pop: { $sum: "$pop" }
+        }
+     },
+     {
+       $match: { "total_pop": { $gte: 10000000 } }
+     }
+   ]
+ )
+
+===================================================
+- 1000만 이상의 state 내림차순 정렬한 뒤 3개만 출력하기
+/* 예상 결과
+{ "_id" : "CA", "total_pop" : 29754890 }
+{ "_id" : "NY", "total_pop" : 17990402 }
+{ "_id" : "TX", "total_pop" : 16984601 }
+*/
+
+// A7. 작성 : 
+db.zips.aggregate(
+  [
+    {
+      $group :
+        {
+          _id : "$state",
+          total_pop: { $sum: "$pop" }
+        }
+     },
+     {
+       $match: { "total_pop": { $gte: 10000000 } }
+     },
+     {
+       $sort: { total_pop: -1 }
+     },
+     {
+       $limit: 3
+     }
+   ]
+ )
+===================================================
+- 주별 도시 인구 평균 구하기(5개 출력)
+/* 예상 결과 
+{ "_id" : { "state" : "PA", "city" : "RUSSELLTON" }, "avg_pop" : 1437 }
+{ "_id" : { "state" : "IA", "city" : "GARDEN GROVE" }, "avg_pop" : 603 }
+{ "_id" : { "state" : "WI", "city" : "LAKE GENEVA" }, "avg_pop" : 11183 }
+{ "_id" : { "state" : "MN", "city" : "CARLISLE" }, "avg_pop" : 18010 }
+{ "_id" : { "state" : "FL", "city" : "LOCKHART" }, "avg_pop" : 23781 }
+*/
+
+// A8. 작성 : db.zips.aggregate(
+  [
+    {
+      $group :
+        {
+	_id : { 
+		  state : "$state",
+		 city : "$city"
+        },
+          avg_pop: { $avg:  "$pop" }
+        }
+     },
+     {
+       $limit: 5
+     }
+   ]
+ )
+
+===================================================
+- 주별 도시 인구 평균이 30000 이 넘는 주와 도시 이름 출력하기 (5개 출력)
+
+/* 예상 결과
+{ "_id" : { "state" : "IN", "city" : "PARK FLETCHER" } }
+{ "_id" : { "state" : "MA", "city" : "ROSLINDALE" } }
+{ "_id" : { "state" : "NC", "city" : "JACKSONVILLE" } }
+{ "_id" : { "state" : "NY", "city" : "LONG BEACH" } }
+{ "_id" : { "state" : "CO", "city" : "THORNTON" } }
+*/
+
+// A9. 작성 :  db.zips.aggregate(
+  [
+    {
+      $group :
+        {
+	_id : { 
+		  state : "$state",
+		 city : "$city"
+        },
+          avg_pop: { $avg:  "$pop" }
+        }
+     },
+     {
+        $match : {"avg_pop" : { $gte : 30000 } }
+      },
+      {
+        $project : {"avg_pop" : 0 }
+      },
+     {
+       $limit: 5
+     }
+   ]
+ )
